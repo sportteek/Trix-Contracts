@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Trix — Full Contracts Demo</title>
+<style>
+  :root{
+    --bg:#0b1220; --card:#ffffff; --muted:#9aa5b1; --accent:#ffcb05;
+    --maxw:720px;
+  }
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,#071022 0%,#0b1220 100%);font-family:Inter,Segoe UI,Roboto,Arial;color:#e6eef6}
+  .app{max-width:var(--maxw);margin:18px auto;padding:14px;}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+  h1{font-size:18px;margin:0}
+  .sub{color:var(--muted);font-size:13px}
+  .board{background:rgba(255,255,255,0.03);border-radius:12px;padding:12px;box-shadow:0 6px 24px rgba(2,6,23,0.6)}
+  .top-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+  .btn{background:var(--accent);color:#06121d;padding:8px 12px;border-radius:10px;border:0;font-weight:700;cursor:pointer}
+  .btn.alt{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--accent)}
+  .flex{display:flex;gap:8px;align-items:center}
+  .panel{background:rgba(255,255,255,0.02);padding:10px;border-radius:10px;flex:1;min-width:160px}
+  .center-table{display:grid;grid-template-columns:1fr;align-items:center;justify-items:center;gap:10px;padding:8px}
+  .playedRow{display:flex;gap:8px;align-items:center;justify-content:center}
+  .playedCard{width:64px;height:92px;border-radius:8px;background:var(--card);color:#000;display:flex;flex-direction:column;justify-content:space-between;padding:6px;font-weight:700;box-shadow:0 6px 14px rgba(2,6,23,0.5);text-align:center}
+  .hand{display:flex;gap:8px;flex-wrap:nowrap;overflow:auto;padding:8px;border-radius:8px}
+  .card{min-width:56px;height:84px;border-radius:8px;background:var(--card);color:#000;display:flex;flex-direction:column;justify-content:space-between;padding:6px;font-weight:700;cursor:pointer;user-select:none;box-shadow:0 3px 8px rgba(2,6,23,0.35)}
+  .card.dim{opacity:0.35;cursor:not-allowed}
+  .playersRow{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .playerBox{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .small{font-size:12px;color:var(--muted)}
+  .log{height:120px;overflow:auto;background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;font-size:13px}
+  .contractList{display:flex;gap:8px;flex-wrap:wrap}
+  .contract{padding:8px 10px;border-radius:8px;background:rgba(255,255,255,0.03);cursor:pointer;border:1px solid transparent}
+  .contract.sel{border-color:var(--accent);box-shadow:0 6px 12px rgba(255,203,5,0.08)}
+  footer{margin-top:12px;color:var(--muted);font-size:13px;text-align:center}
+  @media (max-width:520px){
+    .playedCard{width:48px;height:72px;font-size:12px}
+    .card{min-width:46px;height:72px;font-size:12px}
+    .btn{padding:8px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Trix — Contracts Demo</h1>
+      <div class="sub">Full-contract engine: King / Queens / Diamonds / Collections / Trix</div>
+    </div>
+    <div class="flex">
+      <button id="newBtn" class="btn">New Hand</button>
+      <button id="dealBtn" class="btn alt">Deal</button>
+    </div>
+  </header>
+
+  <div class="board">
+    <div class="top-row">
+      <div class="panel">
+        <div class="small">Choose Contract</div>
+        <div class="contractList" id="contracts">
+          <!-- contracts rendered here -->
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="small">Game Info</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+          <div>
+            <div class="small">Leader:</div>
+            <div id="leaderName">—</div>
+          </div>
+          <div>
+            <div class="small">Tricks:</div>
+            <div id="tricksCount">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="small">Scores</div>
+        <div id="scoreBoard" style="display:flex;gap:10px;margin-top:8px;justify-content:space-between">
+          <!-- players scores -->
+        </div>
+      </div>
+    </div>
+
+    <div class="center-table">
+      <div class="playersRow">
+        <div class="playerBox"><div class="small">North</div><div id="p1count">13</div></div>
+        <div class="playerBox"><div class="small">West</div><div id="p2count">13</div></div>
+        <div class="playerBox"><div class="small">East</div><div id="p3count">13</div></div>
+      </div>
+
+      <div class="playedRow" id="tablePlayed">
+        <div id="pcard0" class="playedCard">—</div>
+        <div id="pcard1" class="playedCard">—</div>
+        <div id="pcard2" class="playedCard">—</div>
+        <div id="pcard3" class="playedCard">—</div>
+      </div>
+
+      <div style="width:100%;margin-top:6px">
+        <div class="small">Your Hand</div>
+        <div id="hand" class="hand" aria-live="polite"></div>
+      </div>
+
+      <div style="width:100%;display:flex;gap:8px;align-items:center;margin-top:8px">
+        <button id="playBtn" class="btn">Play Selected</button>
+        <div class="small" style="flex:1">Turn: <span id="turnIndicator">—</span></div>
+        <div class="small">Contract: <strong id="curContract">—</strong></div>
+      </div>
+
+      <div style="width:100%;margin-top:10px">
+        <div class="small">Log</div>
+        <div id="log" class="log" aria-live="polite"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>Implemented variant: rules can be adjusted. AI uses simple heuristics tailored to contract goals.</footer>
+</div>
+
+<script>
+/* Trix contract engine (common variant). Notes:
+  - Players 0..3 (0 is South / human).
+  - Contracts implemented with scoring rules:
+    King: -2 points per King captured
+    Queens: -3 points per Queen captured
+    Diamonds: -1 point per diamond card captured
+    Collections (Hearts): -1 per heart captured
+    Trix: +1 point per trick won (positive contract)
+  - Follow-suit enforced. AI chooses cards based on contract objective.
+  - Scores accumulate across hands.
+  - This is a flexible engine; tweak contract rules below.
+*/
+
+const SUITS = ["♠","♥","♦","♣"];
+const RANKS = ["2","3","4","5","6","7","8","9","10","J","Q","K","A"];
+
+function createDeck(){
+  const d=[];
+  for(const s of SUITS) for(const r of RANKS) d.push({suit:s, rank:r, code: r + s});
+  return d;
+}
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} }
+function rankValue(r){ return RANKS.indexOf(r); }
+
+let players = [[],[],[],[]]; // hands
+let table = [null,null,null,null];
+let leader = 0;
+let turn = 0;
+let tricks = 0;
+let scores = [0,0,0,0];
+let contract = null;
+let selectedCardIndex = null;
+let tricksWon = [0,0,0,0];
+const contractsList = [
+  { id: 'king', name:'King', desc:'Avoid taking Kings. -2 per King captured', scoring: (taken, playerIdx)=> taken.filter(c=>c.rank==='K').length * -2 },
+  { id: 'queens', name:'Queens', desc:'Avoid Queens. -3 per Queen captured', scoring: (taken, playerIdx)=> taken.filter(c=>c.rank==='Q').length * -3 },
+  { id: 'diamonds', name:'Diamonds', desc:'Avoid Diamonds. -1 per Diamond', scoring: (taken, playerIdx)=> taken.filter(c=>c.suit==='♦').length * -1 },
+  { id: 'collections', name:'Collections (Hearts)', desc:'Avoid Hearts. -1 per Heart', scoring: (taken, playerIdx)=> taken.filter(c=>c.suit==='♥').length * -1 },
+  { id: 'trix', name:'Trix', desc:'Take as many tricks as possible. +1 per trick', scoring: (taken, playerIdx)=> tricksWon[playerIdx] }
+];
+
+const handEl = document.getElementById('hand');
+const logEl = document.getElementById('log');
+const pcardEls = [document.getElementById('pcard0'),document.getElementById('pcard1'),document.getElementById('pcard2'),document.getElementById('pcard3')];
+const turnIndicator = document.getElementById('turnIndicator');
+const leaderName = document.getElementById('leaderName');
+const tricksCountEl = document.getElementById('tricksCount');
+const scoreBoard = document.getElementById('scoreBoard');
+const contractsEl = document.getElementById('contracts');
+const curContractEl = document.getElementById('curContract');
+
+function init(){
+  // render contracts
+  contractsEl.innerHTML = '';
+  contractsList.forEach(c=>{
+    const b = document.createElement('div');
+    b.className = 'contract';
+    b.textContent = c.name;
+    b.title = c.desc;
+    b.onclick = ()=> selectContract(c.id);
+    b.dataset.id = c.id;
+    contractsEl.appendChild(b);
+  });
+  renderScores();
+  log('Ready. Choose a contract and press Deal.');
+}
+init();
+
+function selectContract(id){
+  contract = contractsList.find(c=>c.id===id);
+  // highlight
+  Array.from(contractsEl.children).forEach(ch=> ch.classList.toggle('sel', ch.dataset.id===id));
+  curContractEl.textContent = contract.name;
+  log('Contract selected: ' + contract.name);
+}
+
+document.getElementById('dealBtn').onclick = ()=> {
+  if(!contract){ alert('Please choose a contract first.'); return; }
+  deal();
+};
+document.getElementById('newBtn').onclick = ()=> {
+  // reset overall scores and start new hand selection
+  scores = [0,0,0,0];
+  renderScores();
+  log('Scores reset. Choose a contract and press Deal.');
+}
+
+function deal(){
+  const deck = createDeck();
+  shuffle(deck);
+  players = [[],[],[],[]];
+  for(let i=0;i<52;i++) players[i%4].push(deck[i]);
+  for(let i=0;i<4;i++){
+    players[i].sort((a,b)=> SUITS.indexOf(a.suit) - SUITS.indexOf(b.suit) || rankValue(a.rank)-rankValue(b.rank));
+  }
+  table = [null,null,null,null];
+  leader = 0; // could randomize dealer
+  turn = leader;
+  tricks = 0;
+  tricksWon = [0,0,0,0];
+  selectedCardIndex = null;
+  updateCounts();
+  renderHand();
+  renderTable();
+  renderScores();
+  log('Dealt. Leader: Player ' + leader + '.');
+  updateTurnUI();
+  if(turn !== 0) setTimeout(()=> aiMove(turn), 300);
+}
+
+function updateCounts(){
+  document.getElementById('p1count').textContent = players[1].length;
+  document.getElementById('p2count').textContent = players[2].length;
+  document.getElementById('p3count').textContent = players[3].length;
+}
+
+function renderHand(){
+  handEl.innerHTML = '';
+  players[0].forEach((c,idx)=>{
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.dataset.idx = idx;
+    el.innerHTML = `<div>${c.rank}</div><div style="font-size:14px">${c.suit}</div>`;
+    if(!isLegalPlay(0,c)) el.classList.add('dim');
+    el.onclick = ()=> {
+      // select if legal
+      if(!isLegalPlay(0,c)) { flash('You must follow suit'); return; }
+      selectedCardIndex = idx;
+      Array.from(handEl.children).forEach(ch=> ch.classList.toggle('sel', ch.dataset.idx==idx));
+    };
+    handEl.appendChild(el);
+  });
+}
+
+function renderTable(){
+  for(let i=0;i<4;i++){
+    pcardEls[i].textContent = table[i] ? table[i].rank + table[i].suit : '—';
+  }
+  leaderName.textContent = 'Player ' + leader;
+  tricksCountEl.textContent = tricks;
+  updateCounts();
+}
+
+function log(msg){
+  const d = document.createElement('div');
+  d.textContent = msg;
+  logEl.prepend(d);
+}
+
+function flash(msg){
+  log(msg);
+}
+
+function isLegalPlay(playerIdx, card){
+  if(turn !== playerIdx) return false;
+  const led = table[leader] ? table[leader].suit : null;
+  if(!led) return true;
+  const hasLed = players[playerIdx].some(c=>c.suit === led);
+  if(!hasLed) return true;
+  return card.suit === led;
+}
+
+document.getElementById('playBtn').onclick = ()=> {
+  if(selectedCardIndex===null){ flash('Select a card first'); return; }
+  if(turn !== 0){ flash('Not your turn'); return; }
+  playCard(0, selectedCardIndex);
+};
+
+function playCard(playerIdx, handPos){
+  const card = players[playerIdx].splice(handPos,1)[0];
+  table[playerIdx] = card;
+  log((playerIdx===0? 'You': 'CPU '+playerIdx) + ' played ' + card.rank + card.suit);
+  selectedCardIndex = null;
+  renderHand();
+  renderTable();
+  // advance
+  turn = (playerIdx+1)%4;
+  if(table.filter(Boolean).length === 4){
+    setTimeout(()=> finishTrick(), 350);
+  } else {
+    if(turn !== 0) setTimeout(()=> aiMove(turn), 350);
+  }
+  updateTurnUI();
+}
+
+function aiMove(aiIdx){
+  // simple heuristics per contract:
+  const led = table[leader] ? table[leader].suit : null;
+  let choice = null;
+  if(!led){
+    // leading: strategy depends on contract
+    choice = aiLead(aiIdx);
+  } else {
+    // follow if possible
+    const idx = players[aiIdx].findIndex(c=>c.suit===led);
+    if(idx>=0) choice = idx;
+    else {
+      choice = aiDiscard(aiIdx);
+    }
+  }
+  // play
+  playCard(aiIdx, choice);
+}
+
+function aiLead(aiIdx){
+  // Heuristics:
+  // - For avoid-King/Queens/Collections/Diamonds: lead low cards in suits that reduce chance of winning
+  // - For Trix (positive): lead high to try win trick
+  const p = players[aiIdx];
+  if(contract.id === 'trix'){
+    // lead high card (A,K..)
+    let bestIdx = 0;
+    for(let i=1;i<p.length;i++){
+      if(rankValue(p[i].rank) > rankValue(p[bestIdx].rank)) bestIdx = i;
+    }
+    return bestIdx;
+  } else {
+    // avoid contracts: lead lowest non-dangerous suit
+    // prefer to lead lowest card overall
+    let lowIdx = 0;
+    for(let i=1;i<p.length;i++){
+      if(rankValue(p[i].rank) < rankValue(p[lowIdx].rank)) lowIdx = i;
+    }
+    return lowIdx;
+  }
+}
+
+function aiDiscard(aiIdx){
+  // choose a card to dump based on contract
+  const p = players[aiIdx];
+  if(contract.id === 'queens' || contract.id === 'king' || contract.id === 'diamonds' || contract.id === 'collections'){
+    // try to dump a dangerous high card of target suit if possible, otherwise low arbitrary
+    // for diamonds, try to dump diamond; for queens, try to dump Q if no follow
+    // find worst card to dump
+    let targetSuit = null;
+    if(contract.id === 'diamonds') targetSuit = '♦';
+    if(contract.id === 'collections') targetSuit = '♥';
+    // prefer to discard cards from target suit if available
+    let idx = p.findIndex(c=> targetSuit && c.suit===targetSuit);
+    if(idx>=0) return idx;
+    // else discard highest card if we want to avoid taking tricks, or highest if we want to shed
+    // choose highest to try to win trick? here aim to minimize future risk: throw low
+    let lowIdx = 0;
+    for(let i=1;i<p.length;i++){
+      if(rankValue(p[i].rank) < rankValue(p[lowIdx].rank)) lowIdx = i;
+    }
+    return lowIdx;
+  } else {
+    // Trix: try for high or mid
+    let highIdx = 0;
+    for(let i=1;i<p.length;i++){
+      if(rankValue(p[i].rank) > rankValue(p[highIdx].rank)) highIdx = i;
+    }
+    return highIdx;
+  }
+}
+
+function finishTrick(){
+  // determine winner among cards that follow led suit
+  const ledSuit = table[leader].suit;
+  let winner = leader;
+  let best = table[leader];
+  for(let i=1;i<4;i++){
+    const idx = (leader + i) % 4;
+    const c = table[idx];
+    if(c.suit === ledSuit && rankValue(c.rank) > rankValue(best.rank)){
+      best = c; winner = idx;
+    }
+  }
+  log('Player ' + winner + ' wins trick with ' + best.rank + best.suit);
+  tricks++;
+  tricksWon[winner]++;
+  // collect trick for scoring later: store taken cards per player
+  if(!players[winner].taken) players[winner].taken = [];
+  for(let i=0;i<4;i++){ if(table[i]) players[winner].taken.push(table[i]); table[i]=null; }
+  leader = winner;
+  turn = leader;
+  updateTurnUI();
+  renderTable();
+  // check hand end
+  if(players.every(p=>p.length===0)){
+    setTimeout(()=> endHand(), 300);
+  } else {
+    // if next is CPU, trigger ai move
+    if(turn !== 0) setTimeout(()=> aiMove(turn), 300);
+  }
+}
+
+function endHand(){
+  // compute scoring based on contract
+  log('Hand finished. Computing scores for contract: ' + contract.name);
+  // ensure taken arrays exist
+  for(let i=0;i<4;i++) if(!players[i].taken) players[i].taken = [];
+  const deltas = [0,0,0,0];
+  for(let i=0;i<4;i++){
+    deltas[i] = contract.scoring(players[i].taken, i);
+  }
+  // apply to scores (for Trix we used tricksWon earlier)
+  for(let i=0;i<4;i++){ scores[i] += deltas[i]; }
+  // show breakdown
+  for(let i=0;i<4;i++){
+    log('Player ' + i + ' : ' + deltas[i] + ' pts (total ' + scores[i] + ')');
+  }
+  renderScores();
+  // reset taken collections
+  for(let i=0;i<4;i++) players[i].taken = [];
+}
+
+function renderScores(){
+  scoreBoard.innerHTML = '';
+  for(let i=0;i<4;i++){
+    const el = document.createElement('div');
+    el.style.display='flex';
+    el.style.flexDirection='column';
+    el.style.alignItems='center';
+    el.style.minWidth='60px';
+    el.innerHTML = `<div class="small">P${i}</div><div>${scores[i]}</div>`;
+    scoreBoard.appendChild(el);
+  }
+}
+
+function updateTurnUI(){
+  turnIndicator.textContent = (turn===0? 'You' : 'CPU ' + turn);
+  leaderName.textContent = 'Player ' + leader;
+  tricksCountEl.textContent = tricks;
+}
+
+/* keyboard / touch helpers for mobile */
+document.addEventListener('keydown', e=>{
+  if(e.key==='Enter') document.getElementById('playBtn').click();
+});
+
+/* initial sample: select default contract */
+selectContract('king');
+
+</script>
+</body>
+</html>
